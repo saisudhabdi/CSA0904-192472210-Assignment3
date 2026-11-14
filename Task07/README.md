@@ -19,7 +19,7 @@ The program generates 10,000 score files in a `scores` directory. Files with IDs
 - **Failure isolation:** each task catches its own exception so one missing or corrupt file does not stop the run.
 
 ## Verification and measurement
-Expected total processed is 10,000. There are 112 missing files (IDs divisible by 89) and 103 corrupt files (IDs divisible by 97), with one ID divisible by both; because that file is missing, the expected totals are **9,786 successes and 214 failures**. Verify that the four pool runs produce the same counts.
+Expected total processed is 10,000. There are 112 missing files (IDs divisible by 89) and 102 corrupt files (IDs divisible by 97 but not by 89). One ID is divisible by both and is counted as missing. The expected totals are **9,786 successes and 214 failures**. Verify that the four pool runs produce the same counts.
 
 Record actual elapsed times printed by your computer for pool sizes 1, 2, 4 and 8. Do not copy timings from another computer.
 
