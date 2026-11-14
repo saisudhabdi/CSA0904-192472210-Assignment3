@@ -1,5 +1,6 @@
 # Java Programming Assignment 3 – CO3
 
+**Student name:** G. Sai Sudhabdi  
 **Register number:** 192472210  
 **Repository:** https://github.com/saisudhabdi/CSA0904-192472210-Assignment3  
 **Language:** Java (JDK 11 or later)
