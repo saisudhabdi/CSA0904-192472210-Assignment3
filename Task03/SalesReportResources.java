@@ -10,8 +10,8 @@ public class SalesReportResources {
     private static int openReaders;
 
     private static BufferedReader trackedReader(Path path) throws IOException {
-        openReaders++;
         BufferedReader reader = Files.newBufferedReader(path);
+        openReaders++;
         return new BufferedReader(reader) {
             private boolean closed;
             @Override
