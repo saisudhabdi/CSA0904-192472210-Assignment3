@@ -1,3 +1,5 @@
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -8,15 +10,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 public class ResultProcessor {
-    static class Result {
-        final int studentId;
-        final int score;
-        Result(int studentId, int score) {
-            this.studentId = studentId;
-            this.score = score;
-        }
-    }
-
     static class ProcessingOutcome {
         final boolean success;
         final String detail;
@@ -28,25 +21,44 @@ public class ResultProcessor {
 
     static class ScoreTask implements Callable<ProcessingOutcome> {
         private final int id;
-        ScoreTask(int id) { this.id = id; }
+        private final Path folder;
+
+        ScoreTask(int id, Path folder) {
+            this.id = id;
+            this.folder = folder;
+        }
 
         @Override
         public ProcessingOutcome call() {
+            Path file = folder.resolve("score-" + id + ".txt");
             try {
-                if (id % 97 == 0) throw new IllegalArgumentException("Corrupt score file");
-                if (id % 89 == 0) throw new java.io.FileNotFoundException("Missing score file");
-                int score = (id * 37) % 101;
-                if (score < 0 || score > 100) throw new IllegalArgumentException("Invalid score");
-                Result result = new Result(id, score);
-                return new ProcessingOutcome(true,
-                        "Student " + result.studentId + " score " + result.score);
+                String text = Files.readString(file).trim();
+                int score = Integer.parseInt(text);
+                if (score < 0 || score > 100) {
+                    throw new IllegalArgumentException("Score outside 0-100");
+                }
+                return new ProcessingOutcome(true, "Student " + id + " score " + score);
             } catch (Exception e) {
                 return new ProcessingOutcome(false, "Student " + id + ": " + e.getMessage());
             }
         }
     }
 
-    private static void processWithPool(int poolSize, int count) throws Exception {
+    private static void createInputFiles(Path folder, int count) throws Exception {
+        Files.createDirectories(folder);
+        for (int id = 1; id <= count; id++) {
+            Path file = folder.resolve("score-" + id + ".txt");
+            if (id % 89 == 0) {
+                Files.deleteIfExists(file);
+            } else if (id % 97 == 0) {
+                Files.writeString(file, "CORRUPT_SCORE");
+            } else {
+                Files.writeString(file, Integer.toString((id * 37) % 101));
+            }
+        }
+    }
+
+    private static void processWithPool(int poolSize, int count, Path folder) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(poolSize);
         ConcurrentLinkedQueue<String> successes = new ConcurrentLinkedQueue<>();
         ConcurrentLinkedQueue<String> failures = new ConcurrentLinkedQueue<>();
@@ -55,7 +67,7 @@ public class ResultProcessor {
         long start = System.nanoTime();
         try {
             for (int id = 1; id <= count; id++) {
-                futures.add(executor.submit(new ScoreTask(id)));
+                futures.add(executor.submit(new ScoreTask(id, folder)));
             }
             for (Future<ProcessingOutcome> future : futures) {
                 ProcessingOutcome outcome = future.get();
@@ -73,6 +85,10 @@ public class ResultProcessor {
 
     public static void main(String[] args) throws Exception {
         int count = 10000;
-        for (int pool : new int[]{1, 2, 4, 8}) processWithPool(pool, count);
+        Path folder = Path.of("scores");
+        createInputFiles(folder, count);
+        for (int pool : new int[]{1, 2, 4, 8}) {
+            processWithPool(pool, count, folder);
+        }
     }
 }
